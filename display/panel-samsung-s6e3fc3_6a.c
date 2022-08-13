@@ -86,7 +86,7 @@ static const struct exynos_dsi_cmd s6e3fc3_6a_1_pwm_cmds[] = {
 	EXYNOS_DSI_CMD_SEQ(0x65, 0x01, 0x02, 0x22),
 	EXYNOS_DSI_CMD_SEQ(0xB0, 0x02, 0x38, 0x65),
 	EXYNOS_DSI_CMD_SEQ(0x65, 0x01, 0x00, 0x01, 0x00),
-	EXYNOS_DSI_CMD_SEQ(0xB0, 0x00, 0x28, 0xF2),
+	EXYNOS_DSI_CMD_SEQ(0xB0, 0x00, 0x27, 0xF2),
 	EXYNOS_DSI_CMD_SEQ(0xF2, 0xC4),
 	EXYNOS_DSI_CMD0(freq_update),
 	EXYNOS_DSI_CMD0(test_key_off_f0)
@@ -105,7 +105,7 @@ static const struct exynos_dsi_cmd s6e3fc3_6a_4_pwm_cmds[] = {
 	EXYNOS_DSI_CMD_SEQ(0x65, 0x01, 0x02, 0x22),
 	EXYNOS_DSI_CMD_SEQ(0xB0, 0x02, 0x38, 0x65),
 	EXYNOS_DSI_CMD_SEQ(0x65, 0x01, 0x00, 0x01, 0x00),
-	EXYNOS_DSI_CMD_SEQ(0xB0, 0x00, 0x28, 0xF2),
+	EXYNOS_DSI_CMD_SEQ(0xB0, 0x00, 0x27, 0xF2),
 	EXYNOS_DSI_CMD_SEQ(0xF2, 0xC4),
 	EXYNOS_DSI_CMD0(freq_update),
 	EXYNOS_DSI_CMD0(test_key_off_f0)
@@ -252,7 +252,7 @@ static void s6e3fc3_6a_change_frequency(struct exynos_panel *ctx,
 		return;
 
 	EXYNOS_DCS_WRITE_TABLE(ctx, test_key_on_f0);
-	EXYNOS_DCS_WRITE_SEQ(ctx, 0x60, (vrefresh == 90) ? 0x08 : 0x00);
+	EXYNOS_DCS_WRITE_SEQ(ctx, 0x60, (vrefresh == 90) ? 0x10 : 0x00);
 	EXYNOS_DCS_WRITE_TABLE(ctx, freq_update);
 	EXYNOS_DCS_WRITE_TABLE(ctx, test_key_off_f0);
 
