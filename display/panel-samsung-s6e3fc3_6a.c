@@ -301,7 +301,46 @@ static void s6e3fc3_6a_set_nolp_mode(struct exynos_panel *ctx,
 	dev_info(ctx->dev, "exit LP mode\n");
 }
 
-#define s6e3fc3_6a_LOCAL_HBM_GAMMA_CMD_SIZE 6
+#define S6E3FC3_LOCAL_HBM_GAMMA_CMD_SIZE 6
+static void s6e3fc3_6a_update_lhbm_gamma(struct exynos_panel *ctx)
+{
+	/* ratio provided by HW for update the LHBM gamma.
+	 * ratio must be a integer due to kernel didn't support floating.
+	 * ratio original value R: 1.076923077, G: 1.061566485, B: 1.065269461.
+	 * ratio cannot exceed u32 max 4294967296.
+	 * R gamma hex from last 16bit from gamma_cmd[1] combine with gamma_cmd[3]
+	 * G gamma hex from first 16bit from gamma_cmd[2] combine with gamma_cmd[4]
+	 * B gamma hex from last 16bit from gamma_cmd[2] combine with gamma_cmd[5]
+	 */
+	u8 *gamma_cmd = ctx->hbm.local_hbm.gamma_cmd;
+	const u32 rgb_ratio[3] = {1076923077, 1061566485, 1065269461};
+	const u8 rgb_index[3][2] = {{1, 3}, {2, 4}, {2, 5}};
+	u8 new_gamma_cmd[S6E3FC3_LOCAL_HBM_GAMMA_CMD_SIZE] = {0};
+	u64 tmp;
+	int i;
+	u16 mask, shift;
+	dev_info(ctx->dev, "%s: gamma_cmd(%02x %02x %02x %02x %02x)\n", __func__,
+		gamma_cmd[1], gamma_cmd[2], gamma_cmd[3], gamma_cmd[4], gamma_cmd[5]);
+	for (i = 0; i < ARRAY_SIZE(rgb_ratio); i++) {
+		if (i % 2) {
+			mask = 0xf0;
+			shift = 4;
+		} else {
+			mask = 0x0f;
+			shift = 0;
+		}
+		tmp = ((gamma_cmd[rgb_index[i][0]] & mask) >> shift) << 8 | gamma_cmd[rgb_index[i][1]];
+		dev_dbg(ctx->dev, "%s: lhbm_gamma[%d] = %llu\n", __func__, i, tmp);
+		/* Round off and revert to original gamma value */
+		tmp = (tmp * rgb_ratio[i] + 500000000)/1000000000;
+		dev_dbg(ctx->dev, "%s: new lhbm_gamma[%d] = %llu\n", __func__, i, tmp);
+		new_gamma_cmd[rgb_index[i][0]] |= ((tmp & 0xff00) >> 8) << shift;
+		new_gamma_cmd[rgb_index[i][1]] |= tmp & 0xff;
+	}
+	memcpy(&gamma_cmd[1], &new_gamma_cmd[1], S6E3FC3_LOCAL_HBM_GAMMA_CMD_SIZE - 1);
+	dev_info(ctx->dev, "%s: new_gamma_cmd(%02x %02x %02x %02x %02x)\n", __func__,
+		gamma_cmd[1], gamma_cmd[2], gamma_cmd[3], gamma_cmd[4], gamma_cmd[5]);
+}
 static int s6e3fc3_6a_lhbm_gamma_read(struct exynos_panel *ctx)
 {
 	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
@@ -312,8 +351,8 @@ static int s6e3fc3_6a_lhbm_gamma_read(struct exynos_panel *ctx)
 	EXYNOS_DCS_WRITE_SEQ(ctx, 0xB0, 0x28, 0xF2); /* global para*/
 	EXYNOS_DCS_WRITE_SEQ(ctx, 0xF2, 0xCC); /* 10 bit */
 	EXYNOS_DCS_WRITE_SEQ(ctx, 0xB0, 0x00, 0x22, 0xD8); /* global para */
-	ret = mipi_dsi_dcs_read(dsi, 0xD8, gamma_cmd + 1, s6e3fc3_6a_LOCAL_HBM_GAMMA_CMD_SIZE - 1);
-	if (ret == (s6e3fc3_6a_LOCAL_HBM_GAMMA_CMD_SIZE - 1)) {
+	ret = mipi_dsi_dcs_read(dsi, 0xD8, gamma_cmd + 1, S6E3FC3_LOCAL_HBM_GAMMA_CMD_SIZE - 1);
+	if (ret == (S6E3FC3_LOCAL_HBM_GAMMA_CMD_SIZE - 1)) {
 		gamma_cmd[0] = 0x65;
 		ctx->hbm.local_hbm.gamma_para_ready = true;
 		ret = 0;
@@ -334,7 +373,7 @@ static void s6e3fc3_6a_lhbm_gamma_write(struct exynos_panel *ctx)
 	EXYNOS_DCS_WRITE_SEQ(ctx, 0xF2, 0xCC); /* 10 bit */
 	EXYNOS_DCS_WRITE_SEQ(ctx, 0xB0, 0x03, 0xCD, 0x65); /* global para */
 	exynos_dcs_write(ctx, ctx->hbm.local_hbm.gamma_cmd,
-			 s6e3fc3_6a_LOCAL_HBM_GAMMA_CMD_SIZE); /* write gamma */
+			 S6E3FC3_LOCAL_HBM_GAMMA_CMD_SIZE); /* write gamma */
 	EXYNOS_DCS_WRITE_SEQ(ctx, 0xB0, 0x00, 0x28, 0xF2); /* global para*/
 	EXYNOS_DCS_WRITE_SEQ(ctx, 0xF2, 0xC4); /* 8 bit */
 	EXYNOS_DCS_WRITE_TABLE(ctx, test_key_off_f0);
