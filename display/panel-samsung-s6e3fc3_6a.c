@@ -503,6 +503,15 @@ static void s6e3fc3_6a_debugfs_init(struct drm_panel *panel, struct dentry *root
 			s6e3fc3_6a_lhbm_gamma_write(ctx);
 }
 
+static void s6e3fc3_6a_panel_init(struct exynos_panel *ctx)
+{
+	if (ctx->panel_rev >= PANEL_REV_EVT1_1)
+		if (!s6e3fc3_6a_lhbm_gamma_read(ctx))
+			s6e3fc3_6a_lhbm_gamma_write(ctx);
+	if (ctx->enabled)
+		s6e3fc3_6a_update_te2(ctx);
+}
+
 static void s6e3fc3_6a_get_panel_rev(struct exynos_panel *ctx, u32 id)
 {
 	/* extract command 0xDB */
