@@ -495,7 +495,6 @@ static void s6e3fc3_6a_debugfs_init(struct drm_panel *panel, struct dentry *root
 	exynos_panel_debugfs_create_cmdset(ctx, csroot,
 					   &s6e3fc3_6a_init_cmd_set, "init");
 	dput(csroot);
-}
 
 	if (ctx->panel_rev >= PANEL_REV_EVT1_1)
 		if (!s6e3fc3_6a_lhbm_gamma_read(ctx))
