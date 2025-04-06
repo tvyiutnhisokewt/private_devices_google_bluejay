@@ -259,48 +259,6 @@ static void s6e3fc3_6a_change_frequency(struct exynos_panel *ctx,
 	dev_dbg(ctx->dev, "%s: change to %uhz\n", __func__, vrefresh);
 }
 
-static void s6e3fc3_6a_update_wrctrld(struct exynos_panel *ctx)
-{
-	u8 val = s6e3fc3_6a_WRCTRLD_BCTRL_BIT;
-
-	if (IS_HBM_ON(ctx->hbm_mode))
-		val |= s6e3fc3_6a_WRCTRLD_HBM_BIT;
-
-	if (ctx->hbm.local_hbm.enabled)
-		val |= s6e3fc3_6a_WRCTRLD_LOCAL_HBM_BIT;
-
-	if (ctx->dimming_on)
-		val |= s6e3fc3_6a_WRCTRLD_DIMMING_BIT;
-
-	dev_dbg(ctx->dev,
-		"%s(wrctrld:0x%x, hbm: %s, dimming: %s, local_hbm: %s)\n",
-		__func__, val, IS_HBM_ON(ctx->hbm_mode) ? "on" : "off",
-		ctx->dimming_on ? "on" : "off",
-		ctx->hbm.local_hbm.enabled ? "on" : "off");
-
-	EXYNOS_DCS_WRITE_SEQ(ctx, MIPI_DCS_WRITE_CONTROL_DISPLAY, val);
-
-	/* TODO: need to perform gamma updates */
-}
-
-static void s6e3fc3_6a_set_nolp_mode(struct exynos_panel *ctx,
-				  const struct exynos_panel_mode *pmode)
-{
-	unsigned int vrefresh = drm_mode_vrefresh(&pmode->mode);
-	u32 delay_us = mult_frac(1000, 1020, vrefresh);
-
-	if (!ctx->enabled)
-		return;
-
-	EXYNOS_DCS_WRITE_TABLE(ctx, display_off);
-	s6e3fc3_6a_update_wrctrld(ctx);
-	s6e3fc3_6a_change_frequency(ctx, vrefresh);
-	usleep_range(delay_us, delay_us + 10);
-	EXYNOS_DCS_WRITE_TABLE(ctx, display_on);
-
-	dev_info(ctx->dev, "exit LP mode\n");
-}
-
 #define S6E3FC3_LOCAL_HBM_GAMMA_CMD_SIZE 6
 static void s6e3fc3_6a_update_lhbm_gamma(struct exynos_panel *ctx)
 {
@@ -341,6 +299,50 @@ static void s6e3fc3_6a_update_lhbm_gamma(struct exynos_panel *ctx)
 	dev_info(ctx->dev, "%s: new_gamma_cmd(%02x %02x %02x %02x %02x)\n", __func__,
 		gamma_cmd[1], gamma_cmd[2], gamma_cmd[3], gamma_cmd[4], gamma_cmd[5]);
 }
+
+static void s6e3fc3_6a_update_wrctrld(struct exynos_panel *ctx)
+{
+	u8 val = s6e3fc3_6a_WRCTRLD_BCTRL_BIT;
+
+	if (IS_HBM_ON(ctx->hbm_mode))
+		val |= s6e3fc3_6a_WRCTRLD_HBM_BIT;
+
+	if (ctx->hbm.local_hbm.enabled)
+		val |= s6e3fc3_6a_WRCTRLD_LOCAL_HBM_BIT;
+
+	if (ctx->dimming_on)
+		val |= s6e3fc3_6a_WRCTRLD_DIMMING_BIT;
+
+	dev_dbg(ctx->dev,
+		"%s(wrctrld:0x%x, hbm: %s, dimming: %s, local_hbm: %s)\n",
+		__func__, val, IS_HBM_ON(ctx->hbm_mode) ? "on" : "off",
+		ctx->dimming_on ? "on" : "off",
+		ctx->hbm.local_hbm.enabled ? "on" : "off");
+
+	EXYNOS_DCS_WRITE_SEQ(ctx, MIPI_DCS_WRITE_CONTROL_DISPLAY, val);
+
+	/* TODO: need to perform gamma updates */
+	s6e3fc3_6a_update_lhbm_gamma(ctx);
+}
+
+static void s6e3fc3_6a_set_nolp_mode(struct exynos_panel *ctx,
+				  const struct exynos_panel_mode *pmode)
+{
+	unsigned int vrefresh = drm_mode_vrefresh(&pmode->mode);
+	u32 delay_us = mult_frac(1000, 1020, vrefresh);
+
+	if (!ctx->enabled)
+		return;
+
+	EXYNOS_DCS_WRITE_TABLE(ctx, display_off);
+	s6e3fc3_6a_update_wrctrld(ctx);
+	s6e3fc3_6a_change_frequency(ctx, vrefresh);
+	usleep_range(delay_us, delay_us + 10);
+	EXYNOS_DCS_WRITE_TABLE(ctx, display_on);
+
+	dev_info(ctx->dev, "exit LP mode\n");
+}
+
 static int s6e3fc3_6a_lhbm_gamma_read(struct exynos_panel *ctx)
 {
 	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
